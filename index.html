@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>头像框生成器 - 支持微信保存</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+        }
+        
+        .upload-section, .preview-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .upload-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+        
+        .frame-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .frame-option {
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s;
+            border: 3px solid transparent;
+        }
+        
+        .frame-option:hover {
+            transform: scale(1.05);
+        }
+        
+        .frame-option.active {
+            border-color: #4cd964;
+        }
+        
+        .frame-option img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+        
+        .preview-container {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: move;
+            touch-action: none;
+        }
+        
+        #avatarPreview, #framePreview {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        #framePreview {
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        button {
+            background: #4cd964;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #3cb054;
+            transform: translateY(-2px);
+        }
+        
+        .save-btn {
+            background: #ff9500;
+        }
+        
+        .save-btn:hover {
+            background: #e08500;
+        }
+        
+        .custom-frame-upload {
+            margin-top: 20px;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-label {
+            display: block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-label:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .adjust-controls {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .adjust-control {
+            margin-bottom: 15px;
+        }
+        
+        .adjust-control label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .slider {
+            flex: 1;
+            height: 5px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4cd964;
+            cursor: pointer;
+        }
+        
+        .slider-value {
+            min-width: 30px;
+            text-align: center;
+        }
+        
+        .instructions {
+            margin-top: 40px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        /* 成品展示区域样式 */
+        .result-section {
+            display: none;
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+        }
+        
+        .result-container {
+            max-width: 300px;
+            margin: 0 auto 20px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        #resultImage {
+            width: 100%;
+            display: block;
+        }
+        
+        .result-instruction {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .back-btn {
+            background: #007aff;
+            margin-top: 15px;
+        }
+        
+        .back-btn:hover {
+            background: #0062cc;
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .preview-container {
+                width: 200px;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>山东交通学院</h1>
+            <p class="subtitle">上传头像，调整位置和大小，选择头像框，创建独特的交院个人形象</p>
+        </header>
+        
+        <!-- 主编辑区域 -->
+        <div id="editorSection">
+            <div class="app-container">
+                <div class="upload-section">
+                    <h2 class="section-title">上传头像</h2>
+                    <div class="upload-area" id="avatarUpload">
+                        <div class="upload-icon">📷</div>
+                        <p>点击或拖拽上传头像</p>
+                        <p class="subtitle">支持 JPG、PNG 格式</p>
+                    </div>
+                    
+                    <div class="adjust-controls">
+                        <h2 class="section-title">调整头像</h2>
+                        <div class="adjust-control">
+                            <label for="scaleSlider">缩放: <span id="scaleValue" class="slider-value">100%</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="scaleSlider" class="slider" min="50" max="200" value="100">
+                            </div>
+                        </div>
+                        
+                        <div class="adjust-control">
+                            <label for="positionXSlider">水平位置: <span id="positionXValue" class="slider-value">0</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="positionXSlider" class="slider" min="-100" max="100" value="0">
+                            </div>
+                        </div>
+                        
+                        <div class="adjust-control">
+                            <label for="positionYSlider">垂直位置: <span id="positionYValue" class="slider-value">0</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="positionYSlider" class="slider" min="-100" max="100" value="0">
+                            </div>
+                        </div>
+                        
+                        <button id="resetAdjustBtn">重置调整</button>
+                    </div>
+                    
+                    <h2 class="section-title">选择头像框</h2>
+                    <div class="frame-options">
+                       <h2 class="section-title">选择方形头像框</h2>
+                <div class="frame-options">
+                    <div class="frame-option active" data-frame="frame1">
+                        <img src="https://i.postimg.cc/TwsC3hfy/12.png" alt="头像框1">
+                    </div>
+                    <div class="frame-option" data-frame="frame2">
+                        <img src="https://i.postimg.cc/L5fwdjLz/13.png" alt="头像框2">
+                    </div>
+                    <div class="frame-option" data-frame="frame3">
+                        <img src="https://i.postimg.cc/rs344tPY/14.png" alt="头像框3">
+                    </div>
+                    <div class="frame-option" data-frame="frame4">
+                        <img src="https://i.postimg.cc/HxWkksBn/15.jpg" alt="头像框4">
+                    </div>
+                    <div class="frame-option" data-frame="frame5">
+                        <img src="https://i.postimg.cc/1zb1Lmbm/20.png" alt="头像框5">
+                    </div>
+                    <div class="frame-option" data-frame="frame6">
+                        <img src="https://i.postimg.cc/1R2sLHhw/16.png" alt="头像框6">
+                    </div>
+                    <div class="frame-option" data-frame="frame7">
+                        <img src="https://i.postimg.cc/dVqsB0cL/17.png" alt="头像框7">
+                    </div>
+                    <div class="frame-option" data-frame="frame8">
+                        <img src="https://i.postimg.cc/mrnTBNzv/18.jpg" alt="头像框8">
+                    </div>
+                    <div class="frame-option" data-frame="frame9">
+                        <img src="https://i.postimg.cc/KjSFgG5p/19.png" alt="头像框9">
+                    </div>
+
+                    </div>
+                    
+                    <div class="custom-frame-upload">
+                        <h2 class="section-title">上传自定义头像框</h2>
+                        <label class="file-label">
+                            <input type="file" id="customFrameUpload" accept="image/*">
+                            选择自定义头像框
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="preview-section">
+                    <h2 class="section-title">预览</h2>
+                    <div class="preview-container" id="previewContainer">
+                        <img id="avatarPreview" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjxzdmcgeD0iMzUiIHk9IjM1IiB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0xMiAxNWEzIDMgMCAxIDAgMC02IDMgMyAwIDAgMCAwIDZ6Ii8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48L3N2Zz48L3N2Zz4=" alt="头像预览">
+                        <img id="framePreview" src="https://images.unsplash.com/photo-1579546929662-711aa81148cf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60" alt="头像框预览">
+                    </div>
+                    
+                    <div class="controls">
+                        <button id="resetBtn">重置全部</button>
+                        <button id="saveBtn" class="save-btn">生成并保存头像</button>
+                    </div>
+                    
+                    <div class="instructions" style="margin-top: 20px;">
+                        <h3>操作提示</h3>
+                        <ul>
+                            <li>在预览区域拖拽可以移动头像位置</li>
+                            <li>使用缩放滑块调整头像大小</li>
+                            <li>使用位置滑块微调头像位置</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 成品展示区域 -->
+        <div id="resultSection" class="result-section">
+            <h2 class="section-title">您的专属头像已生成！</h2>
+            <div class="result-container">
+                <img id="resultImage" src="" alt="生成的头像">
+            </div>
+            <div class="result-instruction">
+                <p><strong>微信用户保存方法：</strong></p>
+                <p>长按上方图片 → 点击"保存到手机"</p>
+            </div>
+            <div class="controls">
+                <button id="backBtn" class="back-btn">返回编辑</button>
+                <button id="downloadBtn" class="save-btn">下载图片</button>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>使用说明</h3>
+            <ol>
+                <li>点击"上传头像"区域，选择您的头像图片</li>
+                <li>通过拖拽或滑块调整头像的位置和大小</li>
+                <li>从预设头像框中选择一个，或上传自定义头像框</li>
+                <li>在预览区域查看效果</li>
+                <li>点击"生成并保存头像"创建您的专属头像</li>
+                <li>在微信中长按图片即可保存到手机</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const avatarUpload = document.getElementById('avatarUpload');
+            const avatarPreview = document.getElementById('avatarPreview');
+            const framePreview = document.getElementById('framePreview');
+            const customFrameUpload = document.getElementById('customFrameUpload');
+            const frameOptions = document.querySelectorAll('.frame-option');
+            const resetBtn = document.getElementById('resetBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const previewContainer = document.getElementById('previewContainer');
+            
+            // 调整控件
+            const scaleSlider = document.getElementById('scaleSlider');
+            const positionXSlider = document.getElementById('positionXSlider');
+            const positionYSlider = document.getElementById('positionYSlider');
+            const scaleValue = document.getElementById('scaleValue');
+            const positionXValue = document.getElementById('positionXValue');
+            const positionYValue = document.getElementById('positionYValue');
+            const resetAdjustBtn = document.getElementById('resetAdjustBtn');
+            
+            // 成品展示区域元素
+            const editorSection = document.getElementById('editorSection');
+            const resultSection = document.getElementById('resultSection');
+            const resultImage = document.getElementById('resultImage');
+            const backBtn = document.getElementById('backBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            
+            let currentAvatar = null;
+            let currentFrame = 'frame1';
+            
+            // 头像调整状态
+            let avatarState = {
+                scale: 1.0,
+                positionX: 0,
+                positionY: 0,
+                isDragging: false,
+                dragStartX: 0,
+                dragStartY: 0,
+                currentX: 0,
+                currentY: 0
+            };
+            
+            // 更新头像样式
+            function updateAvatarStyle() {
+                avatarPreview.style.transform = `translate(${avatarState.currentX}px, ${avatarState.currentY}px) scale(${avatarState.scale})`;
+            }
+            
+            // 上传头像
+            avatarUpload.addEventListener('click', function() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            avatarPreview.src = event.target.result;
+                            currentAvatar = event.target.result;
+                            
+                            // 重置调整状态
+                            resetAdjustment();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                input.click();
+            });
+            
+            // 拖放上传头像
+            avatarUpload.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                avatarUpload.style.background = 'rgba(255, 255, 255, 0.2)';
+            });
+            
+            avatarUpload.addEventListener('dragleave', function() {
+                avatarUpload.style.background = '';
+            });
+            
+            avatarUpload.addEventListener('drop', function(e) {
+                e.preventDefault();
+                avatarUpload.style.background = '';
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        avatarPreview.src = event.target.result;
+                        currentAvatar = event.target.result;
+                        
+                        // 重置调整状态
+                        resetAdjustment();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // 选择预设头像框
+            frameOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    frameOptions.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    currentFrame = this.getAttribute('data-frame');
+                    framePreview.src = this.querySelector('img').src;
+                });
+            });
+            
+            // 上传自定义头像框
+            customFrameUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        framePreview.src = event.target.result;
+                        
+                        // 取消所有预设头像框的选中状态
+                        frameOptions.forEach(opt => opt.classList.remove('active'));
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // 缩放滑块事件
+            scaleSlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                avatarState.scale = value / 100;
+                scaleValue.textContent = `${value}%`;
+                updateAvatarStyle();
+            });
+            
+            // 水平位置滑块事件
+            positionXSlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                avatarState.currentX = value;
+                positionXValue.textContent = value;
+                updateAvatarStyle();
+            });
+            
+            // 垂直位置滑块事件
+            positionYSlider.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                avatarState.currentY = value;
+                positionYValue.textContent = value;
+                updateAvatarStyle();
+            });
+            
+            // 重置调整
+            resetAdjustBtn.addEventListener('click', resetAdjustment);
+            
+            // 重置全部
+            resetBtn.addEventListener('click', function() {
+                avatarPreview.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjxzdmcgeD0iMzUiIHk9IjM1IiB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiPjxwYXRoIGQ9Ik0xMiAxNWEzIDMgMCAxIDAgMC02IDMgMyAwIDAgMCAwIDZ6Ii8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48L3N2Zz48L3N2Zz4=';
+                framePreview.src = 'https://images.unsplash.com/photo-1579546929662-711aa81148cf?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
+                
+                frameOptions.forEach(opt => opt.classList.remove('active'));
+                document.querySelector('.frame-option[data-frame="frame1"]').classList.add('active');
+                
+                currentAvatar = null;
+                currentFrame = 'frame1';
+                customFrameUpload.value = '';
+                
+                resetAdjustment();
+            });
+            
+            // 重置调整状态
+            function resetAdjustment() {
+                avatarState.scale = 1.0;
+                avatarState.currentX = 0;
+                avatarState.currentY = 0;
+                
+                scaleSlider.value = 100;
+                positionXSlider.value = 0;
+                positionYSlider.value = 0;
+                
+                scaleValue.textContent = '100%';
+                positionXValue.textContent = '0';
+                positionYValue.textContent = '0';
+                
+                updateAvatarStyle();
+            }
+            
+            // 拖拽功能
+            previewContainer.addEventListener('mousedown', startDrag);
+            previewContainer.addEventListener('touchstart', startDrag);
+            
+            function startDrag(e) {
+                if (!currentAvatar) return;
+                
+                e.preventDefault();
+                avatarState.isDragging = true;
+                
+                // 获取初始位置
+                if (e.type === 'mousedown') {
+                    avatarState.dragStartX = e.clientX - avatarState.currentX;
+                    avatarState.dragStartY = e.clientY - avatarState.currentY;
+                    
+                    document.addEventListener('mousemove', doDrag);
+                    document.addEventListener('mouseup', stopDrag);
+                } else {
+                    const touch = e.touches[0];
+                    avatarState.dragStartX = touch.clientX - avatarState.currentX;
+                    avatarState.dragStartY = touch.clientY - avatarState.currentY;
+                    
+                    document.addEventListener('touchmove', doDrag);
+                    document.addEventListener('touchend', stopDrag);
+                }
+            }
+            
+            function doDrag(e) {
+                if (!avatarState.isDragging) return;
+                
+                e.preventDefault();
+                
+                let clientX, clientY;
+                
+                if (e.type === 'mousemove') {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                } else {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                }
+                
+                // 计算新位置
+                avatarState.currentX = clientX - avatarState.dragStartX;
+                avatarState.currentY = clientY - avatarState.dragStartY;
+                
+                // 限制移动范围
+                const maxMove = 50;
+                avatarState.currentX = Math.max(-maxMove, Math.min(maxMove, avatarState.currentX));
+                avatarState.currentY = Math.max(-maxMove, Math.min(maxMove, avatarState.currentY));
+                
+                // 更新滑块和显示
+                positionXSlider.value = avatarState.currentX;
+                positionYSlider.value = avatarState.currentY;
+                positionXValue.textContent = Math.round(avatarState.currentX);
+                positionYValue.textContent = Math.round(avatarState.currentY);
+                
+                updateAvatarStyle();
+            }
+            
+            function stopDrag() {
+                avatarState.isDragging = false;
+                document.removeEventListener('mousemove', doDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchmove', doDrag);
+                document.removeEventListener('touchend', stopDrag);
+            }
+            
+            // 生成并显示成品
+            saveBtn.addEventListener('click', function() {
+                if (!currentAvatar) {
+                    alert('请先上传头像！');
+                    return;
+                }
+                
+                // 创建画布
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 500;
+                canvas.height = 500;
+                
+                // 绘制头像
+                const avatarImg = new Image();
+                avatarImg.onload = function() {
+                    // 计算缩放和位置，使图片填满方形
+                    const baseScale = Math.max(500 / avatarImg.width, 500 / avatarImg.height);
+                    const finalScale = baseScale * avatarState.scale;
+                    
+                    const x = 250 - (avatarImg.width * finalScale) / 2 + (avatarState.currentX * 2);
+                    const y = 250 - (avatarImg.height * finalScale) / 2 + (avatarState.currentY * 2);
+                    
+                    ctx.drawImage(avatarImg, x, y, avatarImg.width * finalScale, avatarImg.height * finalScale);
+                    
+                    // 绘制头像框
+                    const frameImg = new Image();
+                    frameImg.onload = function() {
+                        ctx.drawImage(frameImg, 0, 0, 500, 500);
+                        
+                        // 显示成品
+                        resultImage.src = canvas.toDataURL('image/png');
+                        editorSection.style.display = 'none';
+                        resultSection.style.display = 'block';
+                    };
+                    frameImg.src = framePreview.src;
+                };
+                avatarImg.src = currentAvatar;
+            });
+            
+            // 返回编辑
+            backBtn.addEventListener('click', function() {
+                resultSection.style.display = 'none';
+                editorSection.style.display = 'block';
+            });
+            
+            // 下载图片
+            downloadBtn.addEventListener('click', function() {
+                const link = document.createElement('a');
+                link.download = '我的专属头像.png';
+                link.href = resultImage.src;
+                link.click();
+            });
+            
+            // 初始化
+            resetAdjustment();
+        });
+    </script>
+</body>
+</html>
